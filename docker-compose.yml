@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  trading-engine:
+    build: .
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+      - ./trades:/app/trades
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
