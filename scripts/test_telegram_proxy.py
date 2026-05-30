@@ -6,6 +6,12 @@ Usage (from project root, venv activated):
 """
 import asyncio
 import sys
+from pathlib import Path
+
+# Allow `from src...` when this file is run as a script.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
 
 from src.config import config
 from src.notifications.telegram_bot import TelegramNotifier, _proxy_endpoint_label

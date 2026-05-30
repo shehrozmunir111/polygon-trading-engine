@@ -18,7 +18,6 @@ from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.exceptions import TelegramAPIError
 from aiogram.filters import Command
 from aiogram.types import BotCommand, Message
-from aiogram.utils.backoff import BackoffConfig
 
 from src.broker.base import OrderResult
 from src.config import config
@@ -225,7 +224,6 @@ class TelegramNotifier:
                         self._bot,
                         polling_timeout=30,
                         handle_signals=False,
-                        backoff_config=BackoffConfig(min_delay=2.0, max_delay=30.0),
                     )
                     break
                 except asyncio.CancelledError:

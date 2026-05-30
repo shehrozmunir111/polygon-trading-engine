@@ -107,7 +107,7 @@ class TradingEngine:
             self._bot_task = asyncio.create_task(self._notifier.start_polling())
             telegram_ok = await self._notifier.wait_until_ready(timeout=35.0)
             self._logger.info(f"Telegram notifier health: {self._notifier.get_health_status()}")
-            if telegram_ok:
+            if telegram_ok and self._notifier.get_health_status().startswith("enabled"):
                 self._logger.info("Telegram bot is ready for commands.")
             else:
                 self._display.error(
