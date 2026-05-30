@@ -102,7 +102,6 @@ polygon-trading-engine/
   scripts/
     test_telegram_proxy.py
   tests/
-  docs/
 ```
 
 ## Requirements
@@ -194,8 +193,6 @@ TELEGRAM_PROXY=socks5://127.0.0.1:1080
 ```
 
 `HTTPS_PROXY` and `HTTP_PROXY` are also read when `TELEGRAM_PROXY` is empty. The `aiohttp-socks` package is included in `requirements.txt`.
-
-Further deployment notes: [docs/telegram-without-local-vpn.md](docs/telegram-without-local-vpn.md)
 
 ### Bot commands
 
