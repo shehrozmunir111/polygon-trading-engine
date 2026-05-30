@@ -13,6 +13,7 @@ from src.strategy.decide import TradeSignal
 from src.state.symbol_state import StateManager
 from src.logging_.trade_logger import TradeLogger
 from src.display.console import ConsoleDisplay
+from src.notifications.telegram_bot import TelegramNotifier
 
 logger = logging.getLogger(__name__)
 
@@ -29,16 +30,22 @@ class ExecutionEngine:
         state_manager: StateManager,
         trade_logger: TradeLogger,
         display: ConsoleDisplay,
+        notifier: TelegramNotifier | None = None,
     ):
         self._broker = broker
         self._state = state_manager
         self._logger = trade_logger
         self._display = display
-        self._open_trades: dict[str, str] = {}    # symbol -> action
+        self._notifier = notifier
+        self._open_trades: dict[str, dict[str, float | str]] = {}    # symbol -> trade snapshot
         self._lock = asyncio.Lock()
 
     def _open_trade_count(self) -> int:
         return len(self._open_trades)
+
+    def get_open_trades(self) -> dict[str, dict[str, float | str]]:
+        """Return a copy of currently open trades for status displays."""
+        return {symbol: trade.copy() for symbol, trade in self._open_trades.items()}
 
     async def handle_signal(self, signal: TradeSignal):
         if signal.action == "HOLD":
@@ -60,6 +67,8 @@ class ExecutionEngine:
                         sym_state.open_trade = None
                     self._display.trade_event(result, signal.reason)
                     self._logger.log(result, signal)
+                    if self._notifier:
+                        await self._notifier.notify_trade(result, signal)
 
             # ── BUY / SELL ───────────────────────────────────────────────────
             elif action in ("BUY", "SELL"):
@@ -76,9 +85,15 @@ class ExecutionEngine:
                     price=signal.price,
                 )
                 if result.success:
-                    self._open_trades[symbol] = action
+                    self._open_trades[symbol] = {
+                        "action": action,
+                        "entry_price": result.price,
+                        "order_id": result.order_id,
+                    }
                     sym_state = self._state.get(symbol)
                     if sym_state:
                         sym_state.open_trade = action
                     self._display.trade_event(result, signal.reason)
                     self._logger.log(result, signal)
+                    if self._notifier:
+                        await self._notifier.notify_trade(result, signal)

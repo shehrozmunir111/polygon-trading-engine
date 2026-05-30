@@ -40,6 +40,7 @@ class PolygonFeed:
         self._on_tick = on_tick
         self._running = False
         self._connections = set()
+        self._auth_failure_logged: dict[str, bool] = {}
 
     async def run(self):
         self._running = True
@@ -61,7 +62,10 @@ class PolygonFeed:
         backoff = 1
         while self._running:
             try:
-                logger.info(f"[{feed.upper()}] Connecting to Polygon WebSocket...")
+                if backoff == 1:
+                    logger.info(f"[{feed.upper()}] Connecting to Polygon WebSocket...")
+                else:
+                    logger.debug(f"[{feed.upper()}] Reconnecting to Polygon WebSocket in {backoff}s...")
                 async with websockets.connect(url, ping_interval=20, ping_timeout=10) as ws:
                     self._connections.add(ws)
                     try:
@@ -72,7 +76,22 @@ class PolygonFeed:
                     finally:
                         self._connections.discard(ws)
             except ConnectionClosed as e:
-                logger.warning(f"[{feed.upper()}] Connection closed: {e}. Reconnecting in {backoff}s...")
+                logger.debug(f"[{feed.upper()}] Connection closed: {e}. Reconnecting in {backoff}s...")
+            except ConnectionError as e:
+                msg = str(e)
+                if "Auth failed" in msg and "auth_failed" in msg:
+                    if not self._auth_failure_logged.get(feed, False):
+                        logger.warning(
+                            f"[{feed.upper()}] Auth failed: {msg}. "
+                            "Your Polygon plan does not include websocket access."
+                        )
+                        self._auth_failure_logged[feed] = True
+                    else:
+                        logger.debug(f"[{feed.upper()}] Auth failed again; not retrying.")
+                    self._running = False
+                    break
+                else:
+                    logger.error(f"[{feed.upper()}] Unexpected error: {e}. Reconnecting in {backoff}s...")
             except Exception as e:
                 logger.error(f"[{feed.upper()}] Unexpected error: {e}. Reconnecting in {backoff}s...")
             if not self._running:

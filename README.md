@@ -96,6 +96,17 @@ OANDA_ENVIRONMENT=practice
 TRADE_MODE=live
 ```
 
+### Telegram Bot
+
+If you want Telegram trade alerts and command control, add:
+
+```env
+TELEGRAM_BOT_TOKEN=your_bot_token_here
+TELEGRAM_CHAT_ID=your_chat_id_here
+```
+
+If `TELEGRAM_CHAT_ID` is left blank, the bot can still receive commands; trade alerts require the chat ID.
+
 ### 2. Run with Docker
 
 Docker is the recommended way to run the project because the image uses Python 3.11, matching the project dependencies.

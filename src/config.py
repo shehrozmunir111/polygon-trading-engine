@@ -3,9 +3,13 @@ config.py — Central config loader.
 All settings come from environment variables (.env file).
 """
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
-load_dotenv()
+# Always load .env from the project root (not the shell's current directory).
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_PROJECT_ROOT / ".env")
 
 
 class Config:
@@ -20,6 +24,16 @@ class Config:
     # Engine
     TRADE_MODE: str = os.getenv("TRADE_MODE", "simulation")   # simulation | live
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
+
+    # Telegram notifications
+    TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    TELEGRAM_CHAT_ID: str = os.getenv("TELEGRAM_CHAT_ID", "")
+    # Routes Python Telegram API calls through a proxy (http / socks5). Also reads HTTPS_PROXY.
+    TELEGRAM_PROXY: str = (
+        os.getenv("TELEGRAM_PROXY", "").strip()
+        or os.getenv("HTTPS_PROXY", "").strip()
+        or os.getenv("HTTP_PROXY", "").strip()
+    )
 
     # Risk
     DEFAULT_UNITS: int = int(os.getenv("DEFAULT_UNITS", "1000"))

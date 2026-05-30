@@ -6,3 +6,6 @@ pandas==2.2.2
 numpy==1.26.4
 ta==0.11.0
 oandapyV20==0.7.2
+aiogram==3.7.0
+aiohttp-socks==0.8.4
+pytest==8.4.2
