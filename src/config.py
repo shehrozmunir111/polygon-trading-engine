@@ -41,6 +41,12 @@ class Config:
     STOP_LOSS_PCT: float = float(os.getenv("STOP_LOSS_PCT", "0.005"))    # 0.5%
     TAKE_PROFIT_PCT: float = float(os.getenv("TAKE_PROFIT_PCT", "0.01")) # 1.0%
 
+    # Middleware
+    SIGNAL_COOLDOWN_SECONDS: int = int(os.getenv("SIGNAL_COOLDOWN_SECONDS", "60"))
+
+    # Ledger
+    RECEIPT_SECRET_KEY: str = os.getenv("RECEIPT_SECRET_KEY", "trading-engine-secret")
+
     # Symbols — Polygon currency pair format
     SYMBOLS: list[str] = [
         "C:USDJPY",

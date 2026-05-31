@@ -14,6 +14,9 @@ import signal
 import sys
 
 from src.config import config
+from src.ledger.receipt import ReceiptLedger
+from src.middleware.botlock import BotLock
+from src.middleware.rate_limiter import RateLimiter
 from src.state.symbol_state import StateManager, Tick
 from src.feeds.polygon_feed import PolygonFeed
 from src.strategy.decide import decide_trade_action
@@ -54,12 +57,18 @@ class TradingEngine:
             token=config.TELEGRAM_BOT_TOKEN,
             chat_id=config.TELEGRAM_CHAT_ID,
         )
+        self._botlock = BotLock()
+        self._rate_limiter = RateLimiter()
+        self._receipt_ledger = ReceiptLedger(mode=config.TRADE_MODE)
         self._engine = ExecutionEngine(
             broker=self._broker,
             state_manager=self._state,
             trade_logger=self._trade_logger,
             display=self._display,
             notifier=self._notifier,
+            botlock=self._botlock,
+            rate_limiter=self._rate_limiter,
+            receipt_ledger=self._receipt_ledger,
         )
         self._notifier.set_open_trades_provider(self._engine.get_open_trades)
         self._notifier.set_shutdown_callback(self.stop)
