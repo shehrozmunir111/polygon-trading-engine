@@ -62,11 +62,6 @@ def _create_telegram_session() -> AiohttpSession:
     if proxy:
         logger.info(f"[TELEGRAM] Using proxy {_proxy_endpoint_label(proxy)} for api.telegram.org")
         return AiohttpSession(proxy=proxy, timeout=30)
-
-    logger.warning(
-        "[TELEGRAM] No proxy configured. If Telegram is blocked in your region, "
-        "set TELEGRAM_PROXY in .env (e.g. socks5://127.0.0.1:1080)."
-    )
     return AiohttpSession(timeout=30)
 
 

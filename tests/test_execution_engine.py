@@ -51,7 +51,7 @@ class DummyTradeLogger:
     def __init__(self):
         self.logged = []
 
-    def log(self, result: OrderResult, signal: TradeSignal):
+    async def log(self, result: OrderResult, signal: TradeSignal):
         self.logged.append((result, signal))
 
 
@@ -123,3 +123,68 @@ def test_handle_signal_close_removes_open_trade_and_notifies():
     open_trades = engine.get_open_trades()
     assert "C:EURUSD" not in open_trades
     assert len(notifier.called) == 2
+
+
+def _make_engine(symbols=None):
+    symbols = symbols or ["C:EURUSD"]
+    return ExecutionEngine(
+        broker=DummyBroker(),
+        state_manager=StateManager(symbols),
+        trade_logger=DummyTradeLogger(),
+        display=ConsoleDisplay(),
+        notifier=DummyNotifier(),
+    )
+
+
+def test_stop_loss_closes_buy_trade():
+    engine = _make_engine()
+    asyncio.run(engine.handle_signal(
+        TradeSignal(action="BUY", symbol="C:EURUSD", price=1.08000, confidence=0.8, reason="test")
+    ))
+    entry = engine.get_open_trades()["C:EURUSD"]["entry_price"]
+    sl = engine.get_open_trades()["C:EURUSD"]["stop_loss"]
+    assert sl < entry
+
+    # price drops below stop-loss
+    asyncio.run(engine.check_stops("C:EURUSD", sl - 0.00001))
+    assert "C:EURUSD" not in engine.get_open_trades()
+
+
+def test_take_profit_closes_buy_trade():
+    engine = _make_engine()
+    asyncio.run(engine.handle_signal(
+        TradeSignal(action="BUY", symbol="C:EURUSD", price=1.08000, confidence=0.8, reason="test")
+    ))
+    tp = engine.get_open_trades()["C:EURUSD"]["take_profit"]
+
+    # price rises above take-profit
+    asyncio.run(engine.check_stops("C:EURUSD", tp + 0.00001))
+    assert "C:EURUSD" not in engine.get_open_trades()
+
+
+def test_stop_loss_closes_sell_trade():
+    engine = _make_engine()
+    asyncio.run(engine.handle_signal(
+        TradeSignal(action="SELL", symbol="C:EURUSD", price=1.08000, confidence=0.8, reason="test")
+    ))
+    sl = engine.get_open_trades()["C:EURUSD"]["stop_loss"]
+
+    # price rises above stop-loss (for a SELL trade)
+    asyncio.run(engine.check_stops("C:EURUSD", sl + 0.00001))
+    assert "C:EURUSD" not in engine.get_open_trades()
+
+
+def test_check_stops_no_action_within_range():
+    engine = _make_engine()
+    asyncio.run(engine.handle_signal(
+        TradeSignal(action="BUY", symbol="C:EURUSD", price=1.08000, confidence=0.8, reason="test")
+    ))
+    # price stays between SL and TP
+    asyncio.run(engine.check_stops("C:EURUSD", 1.08000))
+    assert "C:EURUSD" in engine.get_open_trades()
+
+
+def test_check_stops_no_open_trade():
+    engine = _make_engine()
+    # should not raise even with no trade open
+    asyncio.run(engine.check_stops("C:EURUSD", 1.08000))

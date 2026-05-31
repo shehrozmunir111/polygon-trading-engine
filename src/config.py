@@ -38,6 +38,8 @@ class Config:
     # Risk
     DEFAULT_UNITS: int = int(os.getenv("DEFAULT_UNITS", "1000"))
     MAX_OPEN_TRADES: int = int(os.getenv("MAX_OPEN_TRADES", "3"))
+    STOP_LOSS_PCT: float = float(os.getenv("STOP_LOSS_PCT", "0.005"))    # 0.5%
+    TAKE_PROFIT_PCT: float = float(os.getenv("TAKE_PROFIT_PCT", "0.01")) # 1.0%
 
     # Symbols — Polygon currency pair format
     SYMBOLS: list[str] = [

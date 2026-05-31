@@ -4,6 +4,7 @@ broker/oanda.py — OANDA REST API broker implementation (v20).
 Uses oandapyV20 SDK for order placement and position management.
 Targets OANDA practice (demo) or live environment based on config.
 """
+import asyncio
 import logging
 import time
 
@@ -53,7 +54,8 @@ class OANDABroker(BaseBroker):
 
         try:
             req = orders.OrderCreate(self._account_id, data=body)
-            resp = self._client.request(req)
+            loop = asyncio.get_running_loop()
+            resp = await loop.run_in_executor(None, self._client.request, req)
             fill = resp.get("orderFillTransaction", {})
             order_id = fill.get("id", "unknown")
             fill_price = float(fill.get("price", price))
@@ -88,7 +90,8 @@ class OANDABroker(BaseBroker):
 
         try:
             req = positions.PositionClose(self._account_id, instrument=instrument, data=body)
-            resp = self._client.request(req)
+            loop = asyncio.get_running_loop()
+            resp = await loop.run_in_executor(None, self._client.request, req)
 
             long_fill = resp.get("longOrderFillTransaction", {})
             short_fill = resp.get("shortOrderFillTransaction", {})

@@ -4,6 +4,7 @@ logging_/trade_logger.py — Structured logging + CSV trade recorder.
 Every executed trade is appended to trades/trades.csv.
 Application logs go to logs/engine.log (and console).
 """
+import asyncio
 import csv
 import logging
 import logging.handlers
@@ -66,7 +67,7 @@ class TradeLogger:
                 writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
                 writer.writeheader()
 
-    def log(self, result: OrderResult, signal: TradeSignal):
+    async def log(self, result: OrderResult, signal: TradeSignal):
         ts = datetime.utcfromtimestamp(result.timestamp).strftime("%Y-%m-%d %H:%M:%S")
         row = {
             "timestamp_utc": ts,
@@ -79,11 +80,13 @@ class TradeLogger:
             "confidence": signal.confidence,
             "mode": self._mode,
         }
-        with open(TRADES_FILE, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
-            writer.writerow(row)
-
+        await asyncio.to_thread(self._write_row, row)
         self._logger.info(
             f"TRADE | {result.action} {result.symbol} @ {result.price} "
             f"| units={result.units} | id={result.order_id} | reason={signal.reason}"
         )
+
+    def _write_row(self, row: dict):
+        with open(TRADES_FILE, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+            writer.writerow(row)

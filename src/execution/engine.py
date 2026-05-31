@@ -66,7 +66,7 @@ class ExecutionEngine:
                     if sym_state:
                         sym_state.open_trade = None
                     self._display.trade_event(result, signal.reason)
-                    self._logger.log(result, signal)
+                    await self._logger.log(result, signal)
                     if self._notifier:
                         await self._notifier.notify_trade(result, signal)
 
@@ -85,15 +85,42 @@ class ExecutionEngine:
                     price=signal.price,
                 )
                 if result.success:
+                    sl_mult = (1 - config.STOP_LOSS_PCT) if action == "BUY" else (1 + config.STOP_LOSS_PCT)
+                    tp_mult = (1 + config.TAKE_PROFIT_PCT) if action == "BUY" else (1 - config.TAKE_PROFIT_PCT)
                     self._open_trades[symbol] = {
                         "action": action,
                         "entry_price": result.price,
                         "order_id": result.order_id,
+                        "stop_loss": round(result.price * sl_mult, 6),
+                        "take_profit": round(result.price * tp_mult, 6),
                     }
                     sym_state = self._state.get(symbol)
                     if sym_state:
                         sym_state.open_trade = action
                     self._display.trade_event(result, signal.reason)
-                    self._logger.log(result, signal)
+                    await self._logger.log(result, signal)
                     if self._notifier:
                         await self._notifier.notify_trade(result, signal)
+
+    async def check_stops(self, symbol: str, price: float):
+        """Close an open trade if price has crossed its stop-loss or take-profit level."""
+        async with self._lock:
+            trade = self._open_trades.get(symbol)
+            if not trade:
+                return
+            action = trade["action"]
+            sl = trade.get("stop_loss")
+            tp = trade.get("take_profit")
+            if sl is None or tp is None:
+                return
+
+            if action == "BUY":
+                hit = "SL" if price <= sl else ("TP" if price >= tp else None)
+            else:  # SELL
+                hit = "SL" if price >= sl else ("TP" if price <= tp else None)
+
+        if hit:
+            reason = f"{hit} hit @ {price:.6f}"
+            signal = TradeSignal(action="CLOSE", symbol=symbol, price=price,
+                                 reason=reason, confidence=1.0)
+            await self.handle_signal(signal)

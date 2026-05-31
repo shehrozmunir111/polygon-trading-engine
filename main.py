@@ -75,7 +75,10 @@ class TradingEngine:
         self._state.update(tick)
         sym_state = self._state.get(tick.symbol)
 
-        # 2. Throttled display (avoid flooding console)
+        # 2. Check stop-loss / take-profit on every tick
+        await self._engine.check_stops(tick.symbol, tick.mid)
+
+        # 3. Throttled display (avoids flooding console)
         _tick_counters[tick.symbol] = _tick_counters.get(tick.symbol, 0) + 1
         if _tick_counters[tick.symbol] % _DISPLAY_THROTTLE == 0:
             self._display.tick_update(
@@ -87,7 +90,7 @@ class TradingEngine:
                 rsi=sym_state.indicators.rsi14 if sym_state else None,
             )
 
-        # 3. Call black-box strategy
+        # 4. Call black-box strategy
         if sym_state:
             signal = decide_trade_action(
                 symbol=tick.symbol,
@@ -95,7 +98,7 @@ class TradingEngine:
                 state=sym_state.to_dict(),
             )
 
-            # 4. Route signal to execution engine
+            # 5. Route signal to execution engine
             if signal.action != "HOLD":
                 await self._engine.handle_signal(signal)
 
