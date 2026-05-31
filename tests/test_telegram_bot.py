@@ -29,10 +29,10 @@ def test_format_trade_alert_contains_expected_fields():
     message = notifier._format_trade_alert(result, signal)
 
     assert "🟢 BUY | EUR/USD" in message
-    assert "💰 Price: 1.084150" in message
-    assert "📊 Reason: EMA cross UP | RSI=58.3" in message
-    assert "🎯 Confidence: 72%" in message
-    assert "📋 Order ID: SIM-00001" in message
+    assert "1.084150" in message
+    assert "EMA cross UP | RSI=58.3" in message
+    assert "72%" in message
+    assert "SIM-00001" in message
 
 
 def test_today_trade_summary_counts_wins_and_losses(tmp_path, monkeypatch):

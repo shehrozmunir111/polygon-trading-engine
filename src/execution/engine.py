@@ -59,6 +59,7 @@ class ExecutionEngine:
         self._rate_limiter = rate_limiter or RateLimiter()
         self._receipt_ledger = receipt_ledger          # None → receipts disabled
         self._open_trades: dict[str, dict[str, float | str]] = {}
+        self._paused: bool = False
 
     # ── Public helpers ────────────────────────────────────────────────────────
 
@@ -68,6 +69,21 @@ class ExecutionEngine:
     def get_open_trades(self) -> dict[str, dict[str, float | str]]:
         """Return a copy of currently open trades for status displays."""
         return {symbol: trade.copy() for symbol, trade in self._open_trades.items()}
+
+    def pause(self) -> None:
+        """Pause new BUY/SELL entries. Existing trades and CLOSE signals are unaffected."""
+        self._paused = True
+        logger.info("[ENGINE] Engine paused — no new positions will be opened.")
+
+    def resume(self) -> None:
+        """Resume signal processing after a pause."""
+        self._paused = False
+        logger.info("[ENGINE] Engine resumed — signal processing active.")
+
+    @property
+    def is_paused(self) -> bool:
+        """Return True when the engine is paused for new entries."""
+        return self._paused
 
     # ── Signal handler ────────────────────────────────────────────────────────
 
@@ -84,6 +100,10 @@ class ExecutionEngine:
 
         symbol = signal.symbol
         action = signal.action
+
+        # ── Pause guard (entry signals only) ─────────────────────────────────
+        if self._paused and action in ("BUY", "SELL"):
+            return
 
         # ── Step 1: Rate limiter (entry signals only) ─────────────────────────
         # CLOSE is exempt so that stop-loss / take-profit exits are never

@@ -72,6 +72,15 @@ class TradingEngine:
         )
         self._notifier.set_open_trades_provider(self._engine.get_open_trades)
         self._notifier.set_shutdown_callback(self.stop)
+        self._notifier.set_state_provider(
+            lambda: {s: state.to_dict() for s, state in self._state.all().items()}
+        )
+        self._notifier.set_dropped_counts_provider(
+            lambda: {s: self._botlock.dropped_count(s) for s in config.SYMBOLS}
+        )
+        self._notifier.set_pause_callback(self._engine.pause)
+        self._notifier.set_resume_callback(self._engine.resume)
+        self._notifier.set_paused_provider(lambda: self._engine.is_paused)
         self._bot_task: asyncio.Task | None = None
         self._feed_task: asyncio.Task | None = None
         self._shutdown_event = asyncio.Event()
